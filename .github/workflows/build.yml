@@ -1,6 +1,5 @@
 name: Build Electron App
 
-# Triggers: push to main, PR to main, or manual trigger
 on:
   push:
     branches: ["main"]
@@ -16,52 +15,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Install MSYS2 + required packages (cairo, pkg-config, libpng, libjpeg)
-      - name: Setup MSYS2 and cairo deps (Windows)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Setup MSYS2 and cairo deps
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
-          install: >
+          install: >-
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-cairo
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-libpng
             mingw-w64-x86_64-libjpeg-turbo
-
-      - name: Add MSYS2 mingw64 to PATH
-        run: echo "C:\\msys64\\mingw64\\bin" >> $GITHUB_PATH
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Debug pkg-config (cairo)
-        shell: bash
-        run: |
-          which pkg-config || true
-          pkg-config --cflags cairo || true
-          pkg-config --libs cairo || true
+            mingw-w64-x86_64-giflib
+            mingw-w64-x86_64-pango
+            mingw-w64-x86_64-pixman
 
       - name: Install Dependencies
-        run: npm install
-        env:
-          PKG_CONFIG_PATH: C:\\msys64\\mingw64\\lib\\pkgconfig
-
-      - name: Rebuild native modules for Electron (optional)
-        if: always()
+        shell: msys2 {0}
         run: |
-          npx electron-rebuild -f -w canvas || true
+          export PATH="/mingw64/bin:$PATH"
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          npm install
+        env:
+          npm_config_canvas_binary_host_mirror: https://registry.npmmirror.com/-/binary/canvas
+
+      - name: Create placeholder icon (if missing)
+        shell: bash
+        run: |
+          mkdir -p assets
+          if [ ! -f "assets/icon.ico" ]; then
+            echo "Creating placeholder icon files..."
+            # For Windows, we'll let electron-builder generate from PNG if needed
+            touch assets/icon.ico
+          fi
 
       - name: Build Windows Installer
         run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
           path: dist/*.exe
+          if-no-files-found: error
 
   macos-build:
     name: macOS build
@@ -76,23 +80,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
-      - name: Install native deps on macOS (Homebrew)
+      - name: Install native deps on macOS
         run: |
           brew update
-          brew install pkg-config cairo pango libpng jpeg pixman
+          brew install pkg-config cairo pango libpng jpeg giflib pixman
 
       - name: Install Dependencies
         run: npm install
 
+      - name: Create placeholder icon (if missing)
+        run: |
+          mkdir -p assets
+          if [ ! -f "assets/icon.icns" ]; then
+            echo "Creating placeholder icon files..."
+            touch assets/icon.icns
+          fi
+
       - name: Build macOS DMG
         run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS DMG
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
           path: dist/*.dmg
+          if-no-files-found: error
 
   linux-build:
     name: Linux build
@@ -105,20 +121,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
-      - name: Install native deps for canvas (Ubuntu)
+      - name: Install native deps for canvas
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libpixman-1-dev libcairo2-dev libpango1.0-dev libjpeg-dev libpng-dev libgif-dev
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libpixman-1-dev \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libgif-dev
 
       - name: Install Dependencies
         run: npm install
 
+      - name: Create placeholder icon (if missing)
+        run: |
+          mkdir -p assets
+          if [ ! -f "assets/icon.png" ]; then
+            echo "Creating placeholder icon files..."
+            touch assets/icon.png
+          fi
+
       - name: Build Linux AppImage
         run: npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Linux AppImage
         uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
           path: dist/*.AppImage
+          if-no-files-found: error
