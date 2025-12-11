@@ -1,0 +1,55 @@
+{
+  "name": "secure-pdf-viewer",
+  "version": "1.0.0",
+  "description": "Secure PDF viewer for aviation/travel company with screenshot and recording prevention",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "electron",
+    "pdf",
+    "secure",
+    "viewer"
+  ],
+  "author": "Aviation Company",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "pdfjs-dist": "^3.11.174"
+  },
+  "build": {
+    "appId": "com.aviation.securepdfviewer",
+    "productName": "Secure PDF Viewer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/*.md",
+      "!.git",
+      "!dist"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}
