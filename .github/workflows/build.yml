@@ -1,54 +1,124 @@
-windows-build:
-  runs-on: windows-latest
-  steps:
-    - uses: actions/checkout@v4
+name: Build Electron App
 
-    # Install MSYS2 + required packages (cairo, pkg-config, libpng, libjpeg)
-    - name: Setup MSYS2 and cairo deps (Windows)
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        install: >
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-cairo
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-libpng
-          mingw-w64-x86_64-libjpeg-turbo
+# Triggers: push to main, PR to main, or manual trigger
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
 
-    # Ensure MSYS2 mingw64/bin is available to subsequent steps
-    - name: Add MSYS2 mingw64 to PATH
-      run: echo "C:\\msys64\\mingw64\\bin" >> $GITHUB_PATH
+jobs:
+  windows-build:
+    name: Windows build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      # Install MSYS2 + required packages (cairo, pkg-config, libpng, libjpeg)
+      - name: Setup MSYS2 and cairo deps (Windows)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cairo
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-libpng
+            mingw-w64-x86_64-libjpeg-turbo
 
-    # Optional: show pkg-config info for debugging (will print include/lib flags)
-    - name: Debug pkg-config (cairo)
-      shell: bash
-      run: |
-        pkg-config --cflags cairo || true
-        pkg-config --libs cairo || true
+      - name: Add MSYS2 mingw64 to PATH
+        run: echo "C:\\msys64\\mingw64\\bin" >> $GITHUB_PATH
 
-    - name: Install Dependencies
-      run: npm install
-      env:
-        # Let native build tooling find pkg-config from MSYS2
-        PKG_CONFIG_PATH: C:\\msys64\\mingw64\\lib\\pkgconfig
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-    # If you need to rebuild native modules for Electron's ABI, run electron-rebuild
-    - name: Rebuild native modules for Electron (optional)
-      if: always()
-      run: |
-        npx electron-rebuild -f -w canvas || true
+      - name: Debug pkg-config (cairo)
+        shell: bash
+        run: |
+          which pkg-config || true
+          pkg-config --cflags cairo || true
+          pkg-config --libs cairo || true
 
-    - name: Build Windows Installer
-      run: npm run build:win
+      - name: Install Dependencies
+        run: npm install
+        env:
+          PKG_CONFIG_PATH: C:\\msys64\\mingw64\\lib\\pkgconfig
 
-    - name: Upload Windows Installer
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-installer
-        path: dist/*.exe
+      - name: Rebuild native modules for Electron (optional)
+        if: always()
+        run: |
+          npx electron-rebuild -f -w canvas || true
+
+      - name: Build Windows Installer
+        run: npm run build:win
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/*.exe
+
+  macos-build:
+    name: macOS build
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install native deps on macOS (Homebrew)
+        run: |
+          brew update
+          brew install pkg-config cairo pango libpng jpeg pixman
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build macOS DMG
+        run: npm run build:mac
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/*.dmg
+
+  linux-build:
+    name: Linux build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install native deps for canvas (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libpixman-1-dev libcairo2-dev libpango1.0-dev libjpeg-dev libpng-dev libgif-dev
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Linux AppImage
+        run: npm run build:linux
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: dist/*.AppImage
