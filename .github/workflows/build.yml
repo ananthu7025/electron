@@ -11,10 +11,10 @@ jobs:
   windows-build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -25,7 +25,7 @@ jobs:
         run: npm run build:win
 
       - name: Upload Windows Installer
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-installer
           path: dist/*.exe
@@ -36,10 +36,10 @@ jobs:
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -50,7 +50,7 @@ jobs:
         run: npm run build:mac
 
       - name: Upload macOS DMG
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
           path: dist/*.dmg
@@ -59,10 +59,10 @@ jobs:
   linux-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -73,7 +73,7 @@ jobs:
         run: npm run build:linux
 
       - name: Upload Linux AppImage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
           path: dist/*.AppImage
